@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#050608">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>TaskFlow</title>
+  <!-- ===== ICÔNE DE L'APPLICATION (favicon) =====
+       Pour utiliser votre propre icône, remplacez la valeur de href ci-dessous par votre lien (png, ico ou svg). -->
+  <link rel="icon" href="iconxp.png">
+  <!-- Icône pour l'écran d'accueil iPhone (png 180x180), décommentez et collez votre lien : -->
+  <!-- <link rel="apple-touch-icon" href="https://VOTRE-LIEN/icon-180.png"> -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="authScreen" class="auth hidden">
+    <div class="auth-card">
+      <div class="auth-brand"><span class="brand-mark"><svg class="ic" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span><span>TaskFlow</span></div>
+      <h1 id="authTitle">Connexion</h1>
+      <p id="authHint" class="auth-hint">Entrez vos identifiants pour accéder à vos tâches.</p>
+      <div class="auth-tabs" role="tablist"><button type="button" class="on" data-mode="login">Connexion</button><button type="button" data-mode="register">Créer un compte</button></div>
+      <form autocomplete="off" id="authForm">
+        <label>Identifiant<input autocomplete="off" id="authUser" required minlength="3" maxlength="40" autocapitalize="none" spellcheck="false" placeholder="Login"></label>
+        <label>Mot de passe<span class="pw"><input autocomplete="off" id="authPass" type="password" required minlength="6" maxlength="100" placeholder="6 caractères minimum"><button type="button" id="pwToggle">Afficher</button></span></label>
+        <label id="authConfirmWrap" class="hidden">Confirmer le mot de passe<input autocomplete="off" id="authConfirm" type="password" maxlength="100"></label>
+        <div id="authError" class="auth-error" role="alert"></div>
+        <button type="submit" id="authSubmit" class="primary-btn">Se connecter</button>
+      </form>
+    </div>
+  </div>
+  <div class="app-shell hidden">
+    <aside class="sidebar">
+      <a class="brand" href="#"><span class="brand-mark"><svg class="ic" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span><span>TaskFlow</span></a>
+      <p class="nav-label">ESPACE DE TRAVAIL</p>
+      <button class="nav-item active" data-view="today"><span><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></span> Aujourd'hui</button>
+      <button class="nav-item" data-view="library"><span><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span> Bibliothèque</button>
+      <button class="nav-item" data-view="analytics"><span><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span> Analytique</button>
+      <div class="sidebar-bottom"><div class="user-row"><span class="user-avatar"></span><span class="user-name"></span><button class="icon-btn" data-logout title="Déconnexion" aria-label="Déconnexion"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button></div><div class="sync"></div></div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow" id="dateLabel">VOTRE ESPACE</div>
+          <h1 id="pageTitle">Aujourd'hui</h1>
+        </div>
+        <div class="top-actions"><button class="icon-btn logout-top" data-logout title="Déconnexion" aria-label="Déconnexion"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button><button class="primary-btn" id="headerAdd"><svg class="ic" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Nouvelle tâche</button></div>
+      </header>
+
+      <section id="todayView" class="view">
+        <div class="stats-grid">
+          <article class="stat-card"><span class="stat-icon"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4"/><path d="M13 6h8M13 12h8M13 18h8"/></svg></span><div><p>Tâches du jour</p><strong id="totalCount">0</strong></div></article>
+          <article class="stat-card"><span class="stat-icon"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span><div><p>Terminées</p><strong id="doneCount">0</strong></div></article>
+          <article class="stat-card"><span class="stat-icon"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span><div><p>En cours</p><strong id="progressCount">0</strong></div></article>
+          <article class="stat-card"><span class="stat-icon"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span><div><p>Progression</p><strong id="progressPercent">0%</strong></div></article>
+        </div>
+
+        <section class="analytics-card">
+          <div class="section-heading">
+            <div><h2>Analytics du jour</h2><p>Votre progression aujourd'hui</p></div>
+            <span class="today-chip" id="todayChip">Aujourd'hui</span>
+          </div>
+          <div class="progress-track"><div id="progressBar" class="progress-fill"></div></div>
+          <div class="progress-caption"><span id="progressText">Aucune tâche pour le moment</span><strong id="progressPercentSmall">0%</strong></div>
+        </section>
+
+        <div class="section-heading task-heading">
+          <div><h2>Mes tâches</h2><p>Les choses à faire aujourd'hui</p></div>
+          <select id="taskFilter" class="filter-select" aria-label="Filtrer les tâches">
+            <option value="all">Toutes</option><option value="todo">À faire</option><option value="doing">En cours</option><option value="done">Terminées</option>
+          </select>
+        </div>
+        <div id="taskList" class="task-list"></div>
+      </section>
+
+      <section id="libraryView" class="view hidden">
+        <div class="library-intro">
+          <div><h2>Bibliothèque des tâches</h2><p>Enregistre tes tâches habituelles et ajoute-les à ta journée en un clic.</p></div>
+        </div>
+        <div class="library-tools"><input autocomplete="off" id="searchTemplates" type="search" placeholder="Rechercher une tâche..."><span id="templateCount">0 tâche enregistrée</span></div>
+        <div id="templateList" class="template-grid"></div>
+      </section>
+      <section id="analyticsView" class="view hidden">
+        <div class="stats-grid">
+          <article class="stat-card"><div><p>Total des tâches</p><strong id="aTotal">0</strong></div></article>
+          <article class="stat-card"><div><p>Taux de réussite</p><strong id="aRate">0%</strong></div></article>
+          <article class="stat-card"><div><p>En retard</p><strong id="aLate">0</strong></div></article>
+          <article class="stat-card"><div><p>Haute priorité ouvertes</p><strong id="aUrgent">0</strong></div></article>
+        </div>
+        <section class="analytics-card plain">
+          <div class="section-heading"><div><h2>Activité des 7 derniers jours</h2><p>Tâches planifiées et terminées par jour</p></div>
+            <div class="legend"><span><i style="background:#232a35"></i>Planifiées</span><span><i style="background:var(--accent)"></i>Terminées</span></div></div>
+          <div id="weekChart" class="bars"></div>
+        </section>
+        <div class="two-col">
+          <section class="analytics-card plain"><div class="section-heading"><div><h2>Par priorité</h2><p>Répartition de toutes les tâches</p></div></div><div id="prioChart" class="hrows"></div></section>
+          <section class="analytics-card plain"><div class="section-heading"><div><h2>Par statut</h2><p>Où en sont vos tâches</p></div></div><div id="statusChart"></div></section>
+        </div>
+      </section>
+      <footer>TaskFlow <span>—</span> Données enregistrées dans Google Sheets <span>·</span> <span class="sync"></span></footer>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </main>
+  </div>
+
+  <dialog id="taskDialog" class="modal">
+    <form autocomplete="off" id="taskForm" method="dialog">
+      <div class="modal-head"><div><span class="eyebrow">ORGANISATION</span><h2 id="dialogTitle">Nouvelle tâche</h2></div><button type="button" class="close-btn" data-close aria-label="Fermer"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <label>Nom de la tâche<input autocomplete="off" id="taskName" required maxlength="90" placeholder="Ex. Réviser Python"></label>
+      <div class="form-row">
+        <label>Priorité<select id="taskPriority"><option value="medium">Moyenne</option><option value="high">Haute</option><option value="low">Basse</option></select></label>
+        <label>Heure<input autocomplete="off" id="taskTime" type="time"></label>
+      </div>
+      <label>Date<input autocomplete="off" id="taskDate" type="date" required></label>
+      <label>Commentaires<textarea autocomplete="off" id="taskComment" rows="3" placeholder="Ajouter une note ou un détail..."></textarea></label>
+      <div class="modal-actions"><button type="button" class="secondary-btn" data-close>Annuler</button><button type="submit" class="primary-btn">Enregistrer</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="templateDialog" class="modal">
+    <form autocomplete="off" id="templateForm" method="dialog">
+      <div class="modal-head"><div><span class="eyebrow">BIBLIOTHÈQUE</span><h2 id="templateDialogTitle">Ajouter une tâche habituelle</h2></div><button type="button" class="close-btn" data-close aria-label="Fermer"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <label>Nom de la tâche<input autocomplete="off" id="templateName" required maxlength="90" placeholder="Ex. Faire du sport"></label>
+      <label>Catégorie (facultatif)<input autocomplete="off" id="templateCategory" maxlength="40" placeholder="Ex. Études, Travail, Personnel"></label>
+      <label>Description (facultatif)<textarea autocomplete="off" id="templateDescription" rows="3" placeholder="Petit rappel sur cette tâche..."></textarea></label>
+      <div class="modal-actions"><button type="button" class="secondary-btn" data-close>Annuler</button><button type="submit" class="primary-btn">Enregistrer</button></div>
+    </form>
+  </dialog>
+
+<script src="script.js"></script>
+</body>
+</html>
