@@ -1,4 +1,5 @@
 
+
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 :root{--bg:#050608;--surface:#0d0f13;--surface2:#14171d;--line:#1e222a;--text:#eef2f8;--muted:#8b94a3;--accent:#3b82f6;--accent-d:#2563eb;--accent-soft:rgba(59,130,246,.12);--red:#ff6b64;--amber:#f2b84b;--r:12px;color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -199,3 +200,22 @@ footer span{padding:0 5px}
 @media(max-width:640px){.logout-top{display:grid;min-width:42px;min-height:42px;border:1px solid var(--line)}.auth-card{padding:26px 20px}}
 .brand-mark.has-img{background:transparent;overflow:hidden}
 .brand-mark img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+
+/* ===== Navigation par jour + tâches en retard ===== */
+.day-nav{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.day-nav strong{flex:1;text-align:center;font-size:15px;text-transform:capitalize}
+.day-nav .icon-btn{border:1px solid var(--line);min-width:42px;min-height:42px}
+.day-nav .secondary-btn{min-height:42px;padding:0 14px;white-space:nowrap}
+.late-badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:700;color:var(--red);background:rgba(255,107,100,.12)}
+
+/* ===== Mobile : en-tête ===== */
+@media(max-width:640px){
+  .topbar{flex-wrap:wrap;align-items:flex-start;gap:12px}
+  .topbar>div:first-child{flex:1 1 0;min-width:0}
+  .top-actions{display:contents}
+  .logout-top{order:2;flex-shrink:0}
+  #headerAdd{order:3;flex:0 0 100%;width:100%;justify-content:center;min-height:46px;font-size:14px}
+  .topbar h1{overflow-wrap:anywhere}
+  .template-actions{flex-wrap:nowrap}
+  .template-actions .add-template{min-width:0;flex:1}
+}

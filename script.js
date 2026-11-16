@@ -1,4 +1,5 @@
 
+
 const svg=(d,s=16)=>`<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const IC={clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',pen:'<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',trash:'<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',plus:'<path d="M12 5v14M5 12h14"/>',msg:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'};
 const $ = (id) => document.getElementById(id);
@@ -7,6 +8,14 @@ const read = (key) => { try { return JSON.parse(localStorage.getItem(key)) || []
 let templates = [];
 let tasks = [];
 let editingTaskId = null;
+// ----- Jour affiché (null = aujourd'hui, suit automatiquement le changement de jour) -----
+let viewDate = null;
+const curDate = () => viewDate || today();
+const ymd = ds => ds.split('-').map(Number);
+const fmtDay = ds => { const [y,m,d]=ymd(ds); return new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long'}).format(new Date(y,m-1,d)); };
+const shiftDay = (ds,n) => { const [y,m,d]=ymd(ds); return new Date(y,m-1,d+n).toLocaleDateString('en-CA'); };
+// Tâches du jour affiché + (si on est aujourd'hui) les tâches non terminées des jours précédents
+const visibleTasks = () => { const c=curDate(), t=today(); return tasks.filter(x => x.date===c || (c===t && x.date<t && x.status!=='done')); };
 
 // ===== Google Sheets (Apps Script Web App) =====
 const API_URL = 'https://script.google.com/macros/s/AKfycbzfWKimh7BXaKw8eoILuxbOBTP80sUZosrLk8tzhcHE8a2pLcGIZhsipCM24UckunCn/exec'; // https://script.google.com/macros/s/.../exec
@@ -120,8 +129,20 @@ function showView(view){
   render();
 }
 document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
-$('dateLabel').textContent = new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
-$('todayChip').textContent = new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'long'}).format(new Date());
+function updateDates(){
+  const c=curDate(), isT=c===today();
+  $('dateLabel').textContent = new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
+  $('todayChip').textContent = isT ? new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'long'}).format(new Date()) : fmtDay(c);
+  $('dayLabel').textContent = isT ? "Aujourd'hui" : fmtDay(c);
+  $('dayToday').classList.toggle('hidden', isT);
+}
+$('dayPrev').addEventListener('click',()=>{viewDate=shiftDay(curDate(),-1);render();});
+$('dayNext').addEventListener('click',()=>{viewDate=shiftDay(curDate(),1);render();});
+$('dayToday').addEventListener('click',()=>{viewDate=null;render();});
+let lastDay = today();
+const checkNewDay = () => { if(today()!==lastDay){ lastDay=today(); render(); } };
+setInterval(checkNewDay, 30000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) checkNewDay(); });
 $('headerAdd').onclick = ()=>openTaskDialog();
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close()));
 $('taskFilter').addEventListener('change',renderTasks);
@@ -133,10 +154,21 @@ function openTaskDialog(task=null, template=null){
   $('taskName').value = task?.name || template?.name || '';
   $('taskPriority').value = task?.priority || 'medium';
   $('taskTime').value = task?.time || '';
-  $('taskDate').value = task?.date || today();
+  $('taskDate').value = task?.date || (template ? today() : curDate());
   $('taskComment').value = task?.comment || template?.description || '';
+  const sel=$('taskTemplate'), pick=$('templatePick');
+  if(!task && templates.length){
+    sel.innerHTML='<option value="">— Saisie manuelle —</option>'+templates.map(t=>`<option value="${safe(t.id)}">${safe(t.name)}${t.category?' · '+safe(t.category):''}</option>`).join('');
+    sel.value = template ? template.id : '';
+    pick.classList.remove('hidden');
+  } else pick.classList.add('hidden');
   $('taskDialog').showModal();
 }
+$('taskTemplate').addEventListener('change',e=>{
+  const t=templates.find(x=>x.id===e.target.value);
+  if(!t) return;
+  $('taskName').value=t.name; $('taskComment').value=t.description||'';
+});
 let editingTemplateId=null;
 function openTemplateDialog(tpl=null){
   editingTemplateId=tpl?.id||null; $('templateForm').reset();
@@ -159,7 +191,8 @@ $('templateForm').addEventListener('submit',e=>{
   save(); push('template',item); $('templateDialog').close(); renderTemplates();
 });
 function render(){
-  const todays=tasks.filter(t=>t.date===today());
+  updateDates();
+  const todays=visibleTasks();
   const done=todays.filter(t=>t.status==='done').length;
   const doing=todays.filter(t=>t.status==='doing').length;
   const percent=todays.length?Math.round(done/todays.length*100):0;
@@ -187,18 +220,18 @@ function renderAnalytics(){
 }
 function renderTasks(){
   const filter=$('taskFilter').value;
-  let list=tasks.filter(t=>t.date===today()&&(filter==='all'||t.status===filter));
+  let list=visibleTasks().filter(t=>filter==='all'||t.status===filter);
   list.sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
   $('taskList').innerHTML=list.length?list.map(t=>`
     <article class="task-card ${t.status==='done'?'is-done':''}">
       <input autocomplete="off" class="check-task" type="checkbox" ${t.status==='done'?'checked':''} aria-label="Terminer ${safe(t.name)}" data-done="${t.id}">
       <div class="task-main"><div class="task-name">${safe(t.name)}</div>
-        <div class="task-meta"><span class="priority ${t.priority}">${priorityLabel(t.priority)}</span>${t.time?`<span class="meta-i">${svg(IC.clock,13)} ${safe(t.time)}</span>`:''}</div>
+        <div class="task-meta"><span class="priority ${t.priority}">${priorityLabel(t.priority)}</span>${t.date!==curDate()?`<span class="late-badge">En retard · ${safe(t.date.slice(5).split('-').reverse().join('/'))}</span>`:''}${t.time?`<span class="meta-i">${svg(IC.clock,13)} ${safe(t.time)}</span>`:''}</div>
         ${t.comment?`<div class="comment-line meta-i">${svg(IC.msg,13)} ${safe(t.comment)}</div>`:''}
       </div>
       <div class="task-actions"><select class="status-select" data-status="${t.id}" aria-label="Statut"><option value="todo" ${t.status==='todo'?'selected':''}>À faire</option><option value="doing" ${t.status==='doing'?'selected':''}>En cours</option><option value="done" ${t.status==='done'?'selected':''}>Terminée</option></select>
       <button class="icon-btn" data-edit="${t.id}" title="Modifier" aria-label="Modifier">${svg(IC.pen)}</button><button class="icon-btn" data-delete="${t.id}" title="Supprimer" aria-label="Supprimer">${svg(IC.trash)}</button></div>
-    </article>`).join(''):`<div class="empty-state"><strong>${filter==='all'?'Aucune tâche pour aujourd’hui':'Aucun résultat'}</strong>Ajoute une tâche ou choisis-en une depuis ta bibliothèque.</div>`;
+    </article>`).join(''):`<div class="empty-state"><strong>${filter==='all'?(curDate()===today()?'Aucune tâche pour aujourd’hui':'Aucune tâche ce jour-là'):'Aucun résultat'}</strong>Ajoute une tâche ou choisis-en une depuis ta bibliothèque.</div>`;
   $('taskList').querySelectorAll('[data-done]').forEach(el=>el.addEventListener('change',()=>updateStatus(el.dataset.done,el.checked?'done':'todo')));
   $('taskList').querySelectorAll('[data-status]').forEach(el=>el.addEventListener('change',()=>updateStatus(el.dataset.status,el.value)));
   $('taskList').querySelectorAll('[data-edit]').forEach(el=>el.addEventListener('click',()=>openTaskDialog(tasks.find(t=>t.id===el.dataset.edit))));
@@ -229,3 +262,4 @@ document.querySelectorAll('.modal input, .modal textarea, #searchTemplates, #tas
     el.addEventListener('focus',unlock); el.addEventListener('pointerdown',unlock);
   }
 });
+
