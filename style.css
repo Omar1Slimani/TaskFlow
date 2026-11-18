@@ -1,5 +1,4 @@
 
-
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 :root{--bg:#050608;--surface:#0d0f13;--surface2:#14171d;--line:#1e222a;--text:#eef2f8;--muted:#8b94a3;--accent:#3b82f6;--accent-d:#2563eb;--accent-soft:rgba(59,130,246,.12);--red:#ff6b64;--amber:#f2b84b;--r:12px;color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -219,3 +218,62 @@ footer span{padding:0 5px}
   .template-actions{flex-wrap:nowrap}
   .template-actions .add-template{min-width:0;flex:1}
 }
+
+/* ===== Statut « Pas terminé » ===== */
+.task-card.is-undone{border-color:rgba(242,184,75,.32)}
+.undone-badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:700;color:var(--amber);background:rgba(242,184,75,.12)}
+
+/* ===== Évaluations ===== */
+.rank-list{display:grid;gap:10px;margin-top:22px}
+.rank-card{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);cursor:pointer;width:100%;text-align:left;color:inherit;font:inherit;transition:.15s}
+.rank-card:hover{border-color:#2b3547;transform:translateY(-1px)}
+.rank-card.me{border-color:#1c2c4a;background:linear-gradient(135deg,#0e1626,var(--surface) 70%)}
+.rank-num{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:15px;background:var(--surface2);color:var(--muted);flex-shrink:0;font-variant-numeric:tabular-nums}
+.rank-num.r1{background:rgba(242,184,75,.16);color:var(--amber)}
+.rank-num.r2{background:rgba(190,200,215,.14);color:#c4ccd8}
+.rank-num.r3{background:rgba(205,127,50,.16);color:#d9915a}
+.rank-main{flex:1;min-width:0}
+.rank-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rank-name{display:flex;align-items:center;gap:8px;min-width:0;font-weight:700;font-size:15px}
+.rank-name span.n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank-you{font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:20px;flex-shrink:0}
+.rank-pct{font-weight:800;font-variant-numeric:tabular-nums;flex-shrink:0}
+.rank-sub{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;margin-top:8px}
+.rank-main .htrack{margin-top:9px}
+.rank-tag{font-weight:700}
+.rd-head{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.rd-head h2{margin:0;font-size:20px;letter-spacing:-.4px;flex:1;min-width:0;overflow-wrap:anywhere}
+.donut-wrap{display:flex;align-items:center;gap:22px;margin-top:20px;flex-wrap:wrap}
+.donut{width:150px;height:150px;flex-shrink:0}
+.donut-wrap .slegend{flex:1;min-width:150px;margin:0}
+@media(max-width:640px){
+  .nav-item{flex-direction:column;gap:3px!important;font-size:11px!important;padding:8px 4px!important}
+  .rank-card{padding:13px 12px;gap:11px}
+  .donut{margin:0 auto}
+}
+
+/* ===== Profil ===== */
+.user-avatar{overflow:hidden;cursor:pointer}
+.user-avatar img,.rank-av img,.pf-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.user-name{cursor:pointer}
+.rank-av{width:36px;height:36px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:800;font-size:15px;flex-shrink:0;overflow:hidden;text-transform:uppercase}
+.rd-av{width:44px;height:44px;font-size:18px}
+.pf-avatar-row{display:flex;align-items:center;gap:18px;margin:22px 0 24px;flex-wrap:wrap}
+.pf-avatar{width:96px;height:96px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:800;font-size:38px;overflow:hidden;text-transform:uppercase;flex-shrink:0;border:2px solid var(--line)}
+/* Cadre commun des photos de profil : anneau bleu + liseré sombre, toujours rond et centré */
+.user-avatar,.rank-av,.pf-avatar{border-radius:50%;aspect-ratio:1/1;box-sizing:border-box;border:2px solid var(--accent);box-shadow:0 0 0 2px var(--bg),0 0 14px rgba(59,130,246,.28);background-clip:padding-box;position:relative}
+.user-avatar img,.rank-av img,.pf-avatar img{border-radius:50%;object-position:center}
+.user-avatar{width:36px;height:36px}
+.rank-av{width:40px;height:40px}
+.rd-av{width:48px;height:48px}
+.pf-avatar{width:104px;height:104px;border-width:3px;box-shadow:0 0 0 4px var(--surface),0 0 0 6px rgba(59,130,246,.45),0 8px 28px rgba(59,130,246,.22)}
+.pf-avatar-row{gap:24px}
+.rank-card.me .rank-av{box-shadow:0 0 0 2px #0e1626,0 0 14px rgba(59,130,246,.28)}
+.pf-btns{display:flex;gap:8px;flex-wrap:wrap}
+.pf-form label{display:block;font-size:12.5px;font-weight:700;color:#b9c2d0;margin-bottom:15px}
+.pf-form input{display:block;width:100%;margin-top:7px;border:1px solid var(--line);border-radius:11px;padding:12px 13px;font:15px 'Manrope',sans-serif;color:var(--text);outline:none;background:var(--bg)}
+.pf-form input[readonly]{color:var(--muted);cursor:not-allowed}
+.pf-form .primary-btn{min-height:46px}
+.pf-hint{font-size:12px;color:var(--muted);margin:-6px 0 14px}
+.pf-ok{color:var(--accent)}
+@media(max-width:640px){.pf-form input{font-size:16px}.pf-avatar{width:92px;height:92px;font-size:34px}}
