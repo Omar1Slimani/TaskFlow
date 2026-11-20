@@ -51,10 +51,10 @@ const outItem=(type,o)=>{const x={};Object.keys(o).forEach(k=>x[k]=T(o[k]));retu
 const SYNC={local:'Mode local (URL non configurée)',loading:'Synchronisation…',saving:'Enregistrement…',ok:'Synchronisé',error:'Erreur de synchronisation'};
 function setSync(st){document.querySelectorAll('.sync').forEach(e=>{e.dataset.s=st;e.innerHTML='<i></i>'+SYNC[st];});}
 let toastTimer;
-function toast(msg,err){const t=$('toast');t.textContent=msg;t.className='toast show'+(err?' err':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',4500);}
+function toast(msg,err){const t=$('toast');if(/Unknown action/i.test(msg))msg='Le script Google est ancien : collez le nouveau Code.gs puis redéployez (Nouvelle version).';t.textContent=msg;t.className='toast show'+(err?' err':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',4500);}
 let session=null; try{ session=JSON.parse(localStorage.getItem('taskflow_session')); }catch{}
 const ck=k=>`taskflow_${k}_${session?.username||''}`;
-function save(){ if(!session)return; try{ localStorage.setItem(ck('templates'), JSON.stringify(templates)); localStorage.setItem(ck('tasks'), JSON.stringify(tasks)); }catch{} }
+function save(){ if(!session)return; try{ localStorage.setItem(ck('templates'), JSON.stringify(templates)); localStorage.setItem(ck('tasks'), JSON.stringify(tasks)); }catch{} syncReminders(); }
 let queue=Promise.resolve();
 const call=p=>api({...p,token:session?.token||''});
 function authFail(e){ if(e&&e.message==='Session expirée'){ logout('Session expirée. Veuillez vous reconnecter.'); return true; } return false; }
@@ -122,11 +122,12 @@ function startSession(sess){
   const read2=k=>{try{return JSON.parse(localStorage.getItem(ck(k)))||[];}catch{return [];}};
   tasks=read2('tasks'); templates=read2('templates');
   try{ const pr=JSON.parse(localStorage.getItem(ck('profile'))); profile={displayName:S(pr&&pr.displayName),avatar:S(pr&&pr.avatar)}; }catch{ profile={displayName:'',avatar:''}; }
-  renderIdentity();
+  renderIdentity(); loadNotifCfg(); renderNotifCard();
   $('authScreen').classList.add('hidden'); document.querySelector('.app-shell').classList.remove('hidden');
   showView('today'); loadAll(); loadProfile();
 }
 function logout(msg){
+  try{ const ln=LN(); if(ln) ln.cancelAll(()=>{}); }catch{}
   ratingsData=null; ratingsUser=null; profile={displayName:'',avatar:''}; session=null; tasks=[]; templates=[]; localStorage.removeItem('taskflow_session');
   showAuth(typeof msg==='string'?msg:'');
 }
@@ -159,7 +160,7 @@ function showView(view){
   $('headerAdd').onclick = view==='library' ? ()=>openTemplateDialog() : ()=>openTaskDialog();
   render();
   if(view==='ratings'){ ratingsUser=null; loadRatings(); }
-  if(view==='profile'){ renderProfileForm(); loadProfile(); }
+  if(view==='profile'){ renderProfileForm(); loadProfile(); renderNotifCard(); }
 }
 document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
 function updateDates(){
@@ -233,7 +234,7 @@ function render(){
   $('progressPercent').textContent=percent+'%'; $('progressPercentSmall').textContent=percent+'%';
   $('progressBar').style.width=percent+'%';
   $('progressText').textContent=todays.length?`${done} tâche(s) terminée(s) sur ${todays.length}`:'Aucune tâche pour le moment';
-  renderTasks(); renderTemplates(); renderAnalytics();
+  renderTasks(); renderTemplates(); renderAnalytics(); renderExtras();
 }
 function renderAnalytics(){
   const t0=today(), total=tasks.length, cnt=f=>tasks.filter(f).length;
@@ -256,7 +257,7 @@ function renderTasks(){
   let list=visibleTasks().filter(t=>filter==='all'||t.status===filter);
   list.sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
   $('taskList').innerHTML=list.length?list.map(t=>`
-    <article class="task-card ${t.status==='done'?'is-done':''} ${t.status==='undone'?'is-undone':''}">
+    <article class="task-card p-${safe(t.priority)} ${t.status==='done'?'is-done':''} ${t.status==='undone'?'is-undone':''}">
       <input autocomplete="off" class="check-task" type="checkbox" ${t.status==='done'?'checked':''} aria-label="Terminer ${safe(t.name)}" data-done="${t.id}">
       <div class="task-main"><div class="task-name">${safe(t.name)}</div>
         <div class="task-meta"><span class="priority ${t.priority}">${priorityLabel(t.priority)}</span>${t.date!==curDate()?`<span class="late-badge">En retard · ${safe(t.date.slice(5).split('-').reverse().join('/'))}</span>`:''}${t.status==='undone'?'<span class="undone-badge">Pas terminé</span>':''}${t.time?`<span class="meta-i">${svg(IC.clock,13)} ${safe(t.time)}</span>`:''}</div>
@@ -287,6 +288,59 @@ function renderTemplates(){
   $('templateList').querySelectorAll('[data-template-delete]').forEach(b=>b.addEventListener('click',()=>{if(confirm('Supprimer cette tâche de la bibliothèque ?')){const id=b.dataset.templateDelete;templates=templates.filter(t=>t.id!==id);save();pull('template',id);renderTemplates();}}));
   $('templateList').querySelectorAll('[data-template-edit]').forEach(b=>b.addEventListener('click',()=>openTemplateDialog(templates.find(x=>x.id===b.dataset.templateEdit))));
 }
+// ===== Rappels : notifications locales (Cordova / Android) =====
+var LN=()=>(window.cordova&&cordova.plugins&&cordova.plugins.notification&&cordova.plugins.notification.local)||null;
+var notifCfg={on:true,lead:0}, syncTimer;
+function loadNotifCfg(){
+  notifCfg={on:true,lead:0};
+  try{ const c=JSON.parse(localStorage.getItem(ck('notif'))); if(c) notifCfg={on:c.on!==false,lead:[0,5,10,15,30,60].includes(+c.lead)?+c.lead:0}; }catch{}
+}
+function saveNotifCfg(){ try{ localStorage.setItem(ck('notif'),JSON.stringify(notifCfg)); }catch{} }
+function notifId(str){ let h=0; for(let i=0;i<str.length;i++) h=(h*31+str.charCodeAt(i))|0; return (h&0x3fffffff)||1; }
+function syncReminders(){ clearTimeout(syncTimer); syncTimer=setTimeout(doSyncReminders,400); }
+function doSyncReminders(){
+  const ln=LN(); if(!ln||!session) return;
+  ln.cancelAll(()=>{
+    if(!notifCfg.on) return;
+    const now=Date.now(), used=new Set(), list=[];
+    tasks.forEach(t=>{
+      if(!t.time||!t.date||t.status==='done'||t.status==='undone') return;
+      const [y,m,d]=ymd(t.date), [hh,mm]=t.time.split(':').map(Number);
+      const ev=new Date(y,m-1,d,hh,mm,0);
+      if(ev.getTime()<=now+5000) return;
+      let at=new Date(ev.getTime()-notifCfg.lead*60000), early=notifCfg.lead>0;
+      if(at.getTime()<=now+5000){ at=ev; early=false; }
+      let id=notifId(String(t.id)); while(used.has(id)) id++; used.add(id);
+      list.push({id,title:t.name,text:(early?'Dans '+notifCfg.lead+' min · ':'C’est l’heure · ')+t.time+' · TaskFlow',trigger:{at},foreground:true,priority:2,wakeup:true,lockscreen:true});
+    });
+    list.sort((a,b)=>a.trigger.at-b.trigger.at);
+    if(list.length) ln.schedule(list.slice(0,60));
+  });
+}
+function renderNotifCard(){
+  const ln=LN(), on=$('ntOn'), lead=$('ntLead'), st=$('ntState');
+  on.checked=notifCfg.on; lead.value=String(notifCfg.lead);
+  [on,lead,$('ntTest')].forEach(e=>e.disabled=!ln);
+  $('ntExact').classList.add('hidden');
+  if(!ln){ st.innerHTML='Disponible uniquement dans l’<b>application Android</b> (Cordova).'; return; }
+  st.textContent='Vérification…';
+  ln.hasPermission(g=>{
+    st.innerHTML=g?'Notifications autorisées <b>✓</b>':'Notifications <b>non autorisées</b> : activez-les dans les paramètres Android de l’application.';
+    if(typeof ln.canScheduleExactAlarms==='function') ln.canScheduleExactAlarms(ok=>{ $('ntExact').classList.toggle('hidden',!!ok); st.innerHTML+='<br>Alarmes exactes : '+(ok?'<b>✓ autorisées</b>':'<b>✗ non autorisées</b> (nécessaire quand l’app est fermée)'); });
+  });
+}
+$('ntOn').addEventListener('change',e=>{ notifCfg.on=e.target.checked; saveNotifCfg(); syncReminders(); toast(notifCfg.on?'Rappels activés':'Rappels désactivés'); });
+$('ntLead').addEventListener('change',e=>{ notifCfg.lead=+e.target.value; saveNotifCfg(); syncReminders(); toast('Rappel enregistré'); });
+$('ntTest').addEventListener('click',()=>{ const ln=LN(); if(!ln)return; ln.schedule({id:2147483000,title:'TaskFlow',text:'Notification de test ✓',trigger:{at:new Date(Date.now()+20000)},foreground:true}); toast('Fermez l’application maintenant : une notification arrive dans 20 secondes…'); });
+$('ntExact').addEventListener('click',()=>{ const ln=LN(); if(ln&&typeof ln.openAlarmSettings==='function') ln.openAlarmSettings(); });
+document.addEventListener('deviceready',()=>{
+  const ln=LN(); if(!ln) return;
+  ln.on('click',()=>{ if(session) showView('today'); });
+  renderNotifCard(); syncReminders();
+  if(typeof ln.canScheduleExactAlarms==='function') ln.canScheduleExactAlarms(ok=>{ if(!ok) toast('Pour recevoir les rappels app fermée : Profil → « Autoriser les alarmes exactes ».',true); });
+},false);
+document.addEventListener('resume',()=>{ if(LN()){ renderNotifCard(); syncReminders(); } },false);
+
 // ----- Profil : handlers -----
 document.querySelectorAll('.user-avatar,.user-name').forEach(e=>e.addEventListener('click',()=>showView('profile')));
 const AVATAR_PX=128, AVATAR_MAX=26000;
@@ -432,6 +486,51 @@ function renderRatingDetail(u){
 }
 $('ratingsList').addEventListener('click',e=>{const b=e.target.closest('[data-user]'); if(!b)return; const u=(ratingsData||[]).find(x=>x.username===b.dataset.user); if(u){renderRatingDetail(u);window.scrollTo({top:0});}});
 $('ratingsRefresh').addEventListener('click',loadRatings);
+
+// ===== V2 : thème, héros, semaine, ajout rapide =====
+const THEME_IC={dark:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',light:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'};
+const FLAME='<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>';
+function setTheme(t){
+  document.documentElement.dataset.theme=t; try{localStorage.setItem('taskflow_theme',t);}catch{}
+  $('themeBtn').innerHTML=svg(THEME_IC[t==='light'?'dark':'light'],18);
+  document.querySelector('meta[name=theme-color]').content=t==='light'?'#f3f5fa':'#050608';
+}
+setTheme((()=>{try{return localStorage.getItem('taskflow_theme');}catch{return null;}})()==='light'?'light':'dark');
+$('themeBtn').addEventListener('click',()=>setTheme(document.documentElement.dataset.theme==='light'?'dark':'light'));
+function streak(){
+  const set=new Set(tasks.filter(t=>t.status==='done').map(t=>t.date));
+  let d=today(), n=0; if(!set.has(d)) d=shiftDay(d,-1);
+  while(set.has(d)){ n++; d=shiftDay(d,-1); }
+  return n;
+}
+function renderWeekStrip(){
+  const c=curDate(), [y,m,d]=ymd(c), dow=(new Date(y,m-1,d).getDay()+6)%7, t0=today();
+  $('weekStrip').innerHTML=[...Array(7)].map((_,i)=>{
+    const k=shiftDay(c,i-dow), [yy,mm,dd]=ymd(k), n=tasks.filter(x=>x.date===k).length;
+    const lb=new Intl.DateTimeFormat('fr-FR',{weekday:'short'}).format(new Date(yy,mm-1,dd)).replace('.','');
+    return `<button type="button" class="wd${k===c?' on':''}${k===t0?' now':''}" data-day="${k}" aria-label="${safe(fmtDay(k))}"><small>${lb}</small><b>${dd}</b><i class="${n?'has':''}"></i></button>`;
+  }).join('');
+}
+$('weekStrip').addEventListener('click',e=>{ const b=e.target.closest('[data-day]'); if(!b)return; viewDate=b.dataset.day===today()?null:b.dataset.day; render(); });
+let prevPct=null;
+function renderExtras(){
+  const todays=visibleTasks(), done=todays.filter(t=>t.status==='done').length, left=todays.length-done;
+  const p=todays.length?Math.round(done/todays.length*100):0;
+  const h=new Date().getHours(), nm=((profile&&profile.displayName)||(session&&session.username)||'').split(' ')[0];
+  $('heroHi').textContent=(h<5||h>=18?'Bonsoir':'Bonjour')+(nm?', '+nm:'');
+  $('heroMsg').textContent=!todays.length?'Rien de prévu. Ajoutez votre première tâche.':p===100?'Journée terminée, bravo !':left===1?'Plus qu’une tâche pour finir.':`${left} tâches pour finir la journée.`;
+  const s=streak(); $('heroStreak').innerHTML=svg(FLAME,14)+` ${s} jour${s>1?'s':''} d’affilée`;
+  const late=tasks.filter(x=>x.date<today()&&x.status!=='done'&&x.status!=='undone').length;
+  $('heroLeft').textContent=late?`${late} en retard`:'Aucun retard'; $('heroLeft').classList.toggle('warn',!!late);
+  $('ringPct').textContent=p+'%'; $('ringFill').style.strokeDashoffset=326.7*(1-p/100);
+  if(prevPct!==null&&prevPct<100&&p===100&&todays.length) toast('Bravo ! Toutes les tâches du jour sont terminées.');
+  prevPct=p; renderWeekStrip();
+}
+$('quickAdd').addEventListener('submit',e=>{
+  e.preventDefault(); const name=$('quickInput').value.trim(); if(!name)return;
+  const item={id:uid(),name,priority:'medium',time:'',date:curDate(),comment:'',status:'todo'};
+  tasks.push(item); save(); push('task',item); $('quickInput').value=''; render();
+});
 
 session&&session.token&&session.username ? startSession(session) : showAuth();
   
